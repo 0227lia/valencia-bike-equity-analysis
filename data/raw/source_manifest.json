@@ -1,0 +1,19 @@
+{
+  "retrieved_at_utc": "2026-07-11T01:20:30.826390+00:00",
+  "sources": [
+    {
+      "name": "Aparcamientos de bicicleta",
+      "url": "https://geoportal.valencia.es/server/rest/services/OPENDATA/Trafico/MapServer/206/query",
+      "records": 4316,
+      "file": "bike_parking_arcgis.json",
+      "sha256": "5b9097c3a2706dbb2377bc22ece176547aa9a155af98ddcf422c5c56d5c8fa88"
+    },
+    {
+      "name": "Vulnerabilidad por barrios",
+      "url": "https://opendata.vlci.valencia.es/dataset/ca18278b-d040-4274-b9c7-c1a9daae54b9/resource/fd2ca0dc-5344-4aad-8934-2077a0bb120d/download/vulnerabilidad-por-barrios.geojson",
+      "records": 70,
+      "file": "neighborhood_vulnerability.geojson",
+      "sha256": "4694e85a74956d87d92cab1309b7c793ee6a90a0230ab4d78c40f8bd53a4dcfe"
+    }
+  ]
+}

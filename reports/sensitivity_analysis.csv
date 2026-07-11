@@ -1,0 +1,4 @@
+scenario,rank_correlation_with_default,top_10_overlap_count,top_10_overlap_share,weight_vulnerability,weight_capacity,weight_accessibility,weight_underserved
+default,1.0,10,1.0,0.4,0.3,0.2,0.1
+equity_focus,0.9487,8,0.8,0.55,0.2,0.15,0.1
+access_focus,0.9166,5,0.5,0.25,0.25,0.35,0.15
