@@ -1,16 +1,22 @@
 # Datos
 
-El repositorio incluye snapshots de dos fuentes públicas del Ayuntamiento de Valencia para que el análisis pueda reproducirse sin depender de la red.
+El repositorio versiona snapshots de dos fuentes abiertas del Ayuntamiento de Valencia para permitir una reconstrucción sin conexión:
 
-- Aparcamientos de bicicleta: `data/raw/bike_parking_arcgis.json`.
-- Vulnerabilidad por barrios: `data/raw/neighborhood_vulnerability.geojson`.
-- Trazabilidad y hashes: `data/raw/source_manifest.json`.
+- `raw/bike_parking_arcgis.json`: aparcamientos de bicicleta publicados mediante ArcGIS REST.
+- `raw/neighborhood_vulnerability.geojson`: barrios e indicadores agregados de vulnerabilidad.
+- `raw/source_manifest.json`: URL, fecha de consulta, número de registros y SHA-256 de los snapshots.
 
-Los archivos de `data/processed/` se generan mediante `python src/run_pipeline.py`. Para actualizar las fuentes:
+Los archivos de `processed/` y `reports/` se reconstruyen con:
+
+```bash
+python src/run_pipeline.py
+```
+
+Para obtener una versión más reciente de las fuentes públicas:
 
 ```bash
 python src/fetch_data.py
 python src/run_pipeline.py
 ```
 
-Antes de redistribuir los datos fuera de este repositorio se deben revisar las condiciones publicadas en las páginas originales del portal de datos abiertos.
+Los datos no contienen información personal. Las fuentes mantienen sus propias condiciones de reutilización; revísalas antes de redistribuir los snapshots.

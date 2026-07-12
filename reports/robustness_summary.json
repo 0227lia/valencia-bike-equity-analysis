@@ -1,0 +1,17 @@
+{
+  "samples": 10000,
+  "dirichlet_concentration": 45,
+  "random_state": 42,
+  "base_weight_vulnerability": 0.4,
+  "sampled_weight_mean_vulnerability": 0.39977826705743,
+  "sampled_weight_std_vulnerability": 0.07278340286970199,
+  "base_weight_capacity": 0.3,
+  "sampled_weight_mean_capacity": 0.2995820345394483,
+  "sampled_weight_std_capacity": 0.06712988294016035,
+  "base_weight_accessibility": 0.2,
+  "sampled_weight_mean_accessibility": 0.20091867072714062,
+  "sampled_weight_std_accessibility": 0.05948252331496631,
+  "base_weight_underserved": 0.1,
+  "sampled_weight_mean_underserved": 0.099721027675981,
+  "sampled_weight_std_underserved": 0.04433665983225626
+}
