@@ -1,71 +1,103 @@
 # Metodología
 
-## 1. Pregunta de análisis
+## 1. Propósito y unidad de análisis
 
-El proyecto estudia qué barrios de Valencia presentan una combinación desfavorable de vulnerabilidad urbana, capacidad de aparcamiento para bicicletas y accesibilidad espacial. El resultado es un apoyo exploratorio para priorizar revisiones, no una decisión de inversión.
+El proyecto identifica señales territoriales que justifican una revisión adicional de la red de aparcamiento de bicicletas. La unidad principal es el barrio municipal (`codbar`); la unidad operativa de accesibilidad es un punto interior de malla. No es un modelo de demanda ni un sistema de decisión automática.
 
-## 2. Fuentes y trazabilidad
+## 2. Fuentes, privacidad y trazabilidad
 
-Se utilizan dos conjuntos de datos abiertos del Ayuntamiento de Valencia:
+Se usan dos fuentes abiertas del Ayuntamiento de Valencia:
 
-- puntos de aparcamiento de bicicleta, publicados mediante ArcGIS REST;
-- polígonos de barrios con indicadores de vulnerabilidad, publicados en GeoJSON.
+- puntos de aparcamiento de bicicleta publicados mediante ArcGIS REST;
+- polígonos de barrios e indicadores de vulnerabilidad publicados como GeoJSON.
 
-La descarga usa TLS verificado con el almacén de certificados del sistema. `data/raw/source_manifest.json` registra fecha de consulta, URLs, número de registros y SHA-256 de cada archivo consolidado. No se utilizan datos personales.
+No se procesan datos personales. La descarga usa TLS verificado con `truststore`. El archivo `data/raw/source_manifest.json` registra URL, fecha de consulta, número de registros y hash SHA-256 de cada snapshot.
 
-## 3. Coordenadas y geometrías
+## 3. Normalización espacial
 
-Los aparcamientos están en ETRS89 / UTM zona 30N (`EPSG:25830`) y se transforman a `EPSG:4326` con `pyproj`. Las operaciones point-in-polygon, validación de geometrías y puntos representativos se realizan con Shapely.
+Los puntos de aparcamiento se publican en ETRS89 / UTM 30N (`EPSG:25830`) y se transforman a `EPSG:4326` con `pyproj`. Las geometrías se validan con Shapely y cada punto se asigna al polígono de barrio que lo cubre. Los puntos no asignados quedan fuera de los agregados por barrio.
 
-Cada aparcamiento se asigna al barrio cuya geometría lo cubre. Los registros que no intersectan ningún barrio permanecen sin asignar y no entran en los agregados por barrio.
+## 4. Accesibilidad
 
-## 4. Malla de accesibilidad
+Se construyen dos mallas de centros de celda dentro de cada geometría de barrio:
 
-Dentro de cada barrio se genera una malla de centros de celda separados aproximadamente 300 metros. Los barrios demasiado pequeños para contener un centro de celda reciben un `representative_point` garantizado por Shapely.
+| Uso | Separación aproximada | Propósito |
+|---|---:|---|
+| Diagnóstico | 300 m | Resumen comparable por barrio. |
+| Simulación | 150 m | Reducir el efecto de discretización en el cribado de áreas. |
 
-Para cada punto se calcula la distancia geodésica al aparcamiento más cercano. Un punto se considera con cobertura insuficiente cuando supera 250 metros. Se resumen:
+Para cada punto se calcula la distancia geodésica al aparcamiento existente más cercano. Un punto queda por encima del umbral si supera 250 m. La métrica es una aproximación de línea recta, no una ruta peatonal o ciclista.
 
-- distancia mediana;
-- percentil 90 de distancia;
-- proporción de puntos con cobertura insuficiente.
+## 5. Modelo multicriterio base
 
-La distancia es en línea recta; no representa una ruta peatonal o ciclista real.
+Las señales se normalizan mediante min-max a `[0, 1]`; un valor alto significa mayor motivo de revisión:
 
-## 5. Score de prioridad
+| Componente | Señal | Peso base |
+|---|---|---:|
+| Presión de vulnerabilidad | `ind_global` invertido | 0,40 |
+| Déficit de capacidad | plazas declaradas por km² invertidas | 0,30 |
+| Déficit de accesibilidad | percentil 90 de la distancia | 0,20 |
+| Cobertura insuficiente | proporción de malla por encima de 250 m | 0,10 |
 
-Las señales se normalizan entre 0 y 1. El escenario base combina:
+El score es una suma ponderada. No interpreta el índice de vulnerabilidad como una variable causal ni estima necesidad individual.
 
-- 40% presión de vulnerabilidad;
-- 30% déficit de plazas por km²;
-- 20% déficit de accesibilidad, medido con la distancia p90;
-- 10% proporción de cobertura insuficiente.
+## 6. Sensibilidad y robustez de pesos
 
-Un score alto indica más motivos para revisar el barrio. No estima impacto causal, demanda ni retorno económico.
+Primero se comparan tres escenarios explícitos: `default`, `equity_focus` y `access_focus`. Se publican correlación de rangos y solapamiento del top 10.
 
-## 6. Sensibilidad
+Después se ejecutan 10.000 muestras de una distribución Dirichlet con parámetros `45 * pesos_base` y semilla 42. La concentración 45 mantiene las muestras alrededor de los pesos declarados, pero permite variación de política. Para cada barrio se informa de:
 
-Se recalcula el ranking con dos escenarios alternativos:
+- score esperado e intervalo percentil 5-95;
+- rango esperado e intervalo percentil 5-95;
+- probabilidad empírica de ocupar top 1, top 5 y top 10.
 
-- `equity_focus`: aumenta el peso de vulnerabilidad al 55%;
-- `access_focus`: aumenta accesibilidad y cobertura insuficiente hasta un 50% combinado.
+Estas probabilidades son **condicionales a esta familia de pesos y a los datos disponibles**. No son probabilidades de éxito de una intervención ni una inferencia estadística sobre la población.
 
-Se comparan correlación de rangos y coincidencia del top 10. En la ejecución incluida, `equity_focus` conserva 8 de los 10 primeros barrios y `access_focus` conserva 5. Esto muestra que el orden general es estable, pero las primeras posiciones dependen de la política elegida.
+## 7. Diagnóstico espacial
 
-## 7. Ubicaciones candidatas
+Se construye una matriz binaria k-nearest-neighbours sobre centroides de barrio, con `k=5` y normalización por fila. Se calcula Moran global:
 
-Los candidatos parten de puntos de malla a más de 250 metros del aparcamiento más cercano. Su score combina prioridad del barrio y déficit de distancia. Después se exige una separación mínima de 350 metros y un máximo de tres ubicaciones por barrio.
+```text
+I = (n / S0) * sum_i sum_j w_ij (x_i - x_bar)(x_j - x_bar) / sum_i (x_i - x_bar)^2
+```
 
-Estas coordenadas no se han validado a nivel de calle y pueden caer en zonas portuarias, industriales, privadas o físicamente inviables.
+La significación global se aproxima mediante 999 permutaciones bilaterales con semilla 42. También se publican cuadrantes descriptivos basados en el score estandarizado y su lag espacial: `high-high`, `high-low`, `low-high` y `low-low`. No se calcula ni afirma significación local para esos cuadrantes.
 
-## 8. Limitaciones
+## 8. Plan contrafactual de áreas de revisión
 
-- No se dispone de demanda ciclista, aforos, origen-destino ni ocupación real.
-- La capacidad declarada no garantiza disponibilidad o estado de conservación.
-- La densidad por superficie no corrige población, red viaria ni uso del suelo.
-- Los pesos expresan una decisión analítica discutible; por eso se publica la sensibilidad.
-- La distancia en línea recta ignora barreras, pendientes y cruces.
-- Toda ubicación requiere inspección de calle y evaluación urbanística.
+El candidato inicial es cualquier punto de la malla de 150 m que se encuentra por encima de 250 m de distancia. Se seleccionan como máximo 25 áreas con:
+
+- separación mínima de 350 m entre áreas seleccionadas;
+- máximo de tres áreas por barrio;
+- objetivo greedy de reducción de déficit de distancia ponderado.
+
+En cada paso, para cada candidato `j` se calcula la ganancia:
+
+```text
+G_j = sum_i [max(d_i - 250, 0) - max(min(d_i, d_ij) - 250, 0)] * q_i
+q_i = 1 + 1,5 * prioridad_i + 0,75 * P_i(top 10)
+```
+
+`d_i` es la distancia actual del punto de malla `i` al aparcamiento más cercano y `d_ij` su distancia al candidato `j`. La ponderación `q_i` da mayor importancia a déficit de distancia en barrios prioritarios y robustos. El resultado expresa una ganancia de distancia ponderada, no número de usuarios, demanda o retorno económico.
+
+Las coordenadas generadas son puntos de cribado. Antes de cualquier propuesta real deben comprobarse calle, propiedad, obstáculos, red ciclista, seguridad, demanda, capacidad y condiciones urbanísticas.
 
 ## 9. Reproducibilidad
 
-Los datos públicos consolidados se incluyen como snapshot para ejecutar el análisis sin red. `python src/fetch_data.py` permite actualizarlos y `python src/run_pipeline.py` reconstruye tablas, figuras, sensibilidad y resumen ejecutivo. Los tests validan transformación, geometrías, malla y score.
+```bash
+python -m pip install -r requirements-dev.txt
+python -m ruff check .
+python -m pytest
+python src/run_pipeline.py
+streamlit run app.py
+```
+
+El pipeline usa los snapshots versionados por defecto. `python src/fetch_data.py` actualiza fuentes antes de una nueva ejecución y cambia el manifiesto de trazabilidad.
+
+## 10. Limitaciones
+
+- La malla es una aproximación espacial y no sustituye análisis de red.
+- Las plazas declaradas no informan de ocupación, mantenimiento o accesibilidad universal.
+- El área del barrio no sustituye población, empleo, visitantes o uso del suelo.
+- Los resultados dependen de indicadores y pesos elegidos.
+- La simulación no modela capacidad de los nuevos aparcamientos, coste ni desplazamiento de demanda.

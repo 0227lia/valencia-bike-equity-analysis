@@ -1,49 +1,47 @@
 # Resumen ejecutivo
 
-Este análisis prioriza barrios de Valencia para ampliar la red de aparcamientos de bicicleta. El criterio combina vulnerabilidad urbana, capacidad existente y distancia estimada hasta el aparcamiento más cercano.
+Este proyecto realiza un cribado geoespacial reproducible para identificar barrios y zonas de Valencia que merecen una revisión más detallada de aparcamiento de bicicletas. Combina vulnerabilidad urbana, capacidad declarada y distancia al aparcamiento más cercano.
 
-## Métricas principales
+## Qué aporta el análisis
 
-- Barrios analizados: 70
-- Ubicaciones candidatas propuestas: 24
-- Barrio con mayor prioridad: EL GRAU (POBLATS MARÍTIMS)
-- Mediana de distancia p90 al aparcamiento más cercano: 85 metros
+- **70 barrios** y **4.316 puntos de aparcamiento** procesados desde snapshots públicos.
+- Malla de diagnóstico de 300 m y malla de simulación de 150 m.
+- **10.000 simulaciones de pesos**: 9 barrios tienen al menos un 80% de probabilidad de mantenerse en el top 10.
+- Moran global I=0.255; prueba por permutación bilateral p=0.001 con k=5.
+- En el escenario de 25 áreas de revisión, el modelo reduce el déficit de distancia ponderado un 71.0% y lleva 179 puntos de malla por debajo del umbral.
 
-## Barrios con mayor prioridad
+## Ranking con incertidumbre
 
-- EL GRAU (POBLATS MARÍTIMS): prioridad=0.846, plazas/km2=90.7, cobertura insuficiente=78.9%
-- LA PUNTA (QUATRE CARRERES): prioridad=0.711, plazas/km2=8.4, cobertura insuficiente=80.6%
-- EL CALVARI (CAMPANAR): prioridad=0.614, plazas/km2=640.5, cobertura insuficiente=0.0%
-- EN CORTS (QUATRE CARRERES): prioridad=0.599, plazas/km2=351.6, cobertura insuficiente=0.0%
-- CIUTAT FALLERA (BENICALAP): prioridad=0.596, plazas/km2=281.7, cobertura insuficiente=0.0%
-- SOTERNES (L'OLIVERETA): prioridad=0.589, plazas/km2=401.2, cobertura insuficiente=0.0%
-- CAMI DE VERA (BENIMACLET): prioridad=0.583, plazas/km2=176.5, cobertura insuficiente=37.5%
-- SANT MARCEL.LI (JESUS): prioridad=0.577, plazas/km2=236.1, cobertura insuficiente=0.0%
-- LA CREU COBERTA (JESUS): prioridad=0.564, plazas/km2=106.7, cobertura insuficiente=0.0%
-- LA FONTETA S.LLUIS (QUATRE CARRERES): prioridad=0.561, plazas/km2=175.9, cobertura insuficiente=0.0%
+- **El Grau** (Poblats Marítims): rango base 1, rango esperado 1.0, intervalo 5-95 1-1, P(top 10)=100.0%.
+- **La Punta** (Quatre Carreres): rango base 2, rango esperado 2.2, intervalo 5-95 2-3, P(top 10)=99.9%.
+- **El Calvari** (Campanar): rango base 3, rango esperado 4.3, intervalo 5-95 2-11, P(top 10)=93.8%.
+- **En Corts** (Quatre Carreres): rango base 4, rango esperado 4.7, intervalo 5-95 4-7, P(top 10)=99.3%.
+- **Ciutat Fallera** (Benicalap): rango base 5, rango esperado 5.2, intervalo 5-95 3-6, P(top 10)=100.0%.
+- **Soternes** (L'Olivereta): rango base 6, rango esperado 6.8, intervalo 5-95 5-10, P(top 10)=95.0%.
+- **Cami De Vera** (Benimaclet): rango base 7, rango esperado 7.7, intervalo 5-95 3-19, P(top 10)=81.5%.
+- **Sant Marcel.Li** (Jesus): rango base 8, rango esperado 7.8, intervalo 5-95 7-9, P(top 10)=97.4%.
+- **La Creu Coberta** (Jesus): rango base 9, rango esperado 9.5, intervalo 5-95 6-13, P(top 10)=82.7%.
+- **La Fonteta S.Lluis** (Quatre Carreres): rango base 10, rango esperado 10.2, intervalo 5-95 8-13, P(top 10)=63.1%.
 
-## Sensibilidad del ranking
+## Sensibilidad a políticas explícitas
 
-Se comparó el escenario base con alternativas que dan más peso a equidad o accesibilidad.
-La correlación mide estabilidad global y el solapamiento indica cuántos barrios permanecen en el top 10.
+- `default`: correlación de rangos=1.000; solapamiento top 10=10/10.
+- `equity_focus`: correlación de rangos=0.949; solapamiento top 10=8/10.
+- `access_focus`: correlación de rangos=0.917; solapamiento top 10=5/10.
 
-- default: correlación=1.000, coincidencia top 10=10/10
-- equity_focus: correlación=0.949, coincidencia top 10=8/10
-- access_focus: correlación=0.917, coincidencia top 10=5/10
+## Áreas de revisión modeladas
 
-## Ubicaciones candidatas principales
+- Puesto 1: **El Grau** (Poblats Marítims), distancia actual=1470 m, ganancia marginal ponderada=190557 m.
+- Puesto 2: **El Grau** (Poblats Marítims), distancia actual=1861 m, ganancia marginal ponderada=129274 m.
+- Puesto 3: **La Punta** (Quatre Carreres), distancia actual=1044 m, ganancia marginal ponderada=73545 m.
+- Puesto 4: **La Punta** (Quatre Carreres), distancia actual=1104 m, ganancia marginal ponderada=60301 m.
+- Puesto 5: **El Grau** (Poblats Marítims), distancia actual=1198 m, ganancia marginal ponderada=36288 m.
+- Puesto 6: **La Punta** (Quatre Carreres), distancia actual=742 m, ganancia marginal ponderada=22004 m.
+- Puesto 7: **Sant Pau** (Campanar), distancia actual=731 m, ganancia marginal ponderada=18834 m.
+- Puesto 8: **Natzaret** (Poblats Marítims), distancia actual=259 m, ganancia marginal ponderada=11460 m.
+- Puesto 9: **Malilla** (Quatre Carreres), distancia actual=630 m, ganancia marginal ponderada=11353 m.
+- Puesto 10: **Natzaret** (Poblats Marítims), distancia actual=616 m, ganancia marginal ponderada=10162 m.
 
-- Puesto 1: EL GRAU (POBLATS MARÍTIMS), lat=39.432217, lon=-0.311742, aparcamiento existente más cercano=2241m
-- Puesto 2: EL GRAU (POBLATS MARÍTIMS), lat=39.448386, lon=-0.304762, aparcamiento existente más cercano=2114m
-- Puesto 3: EL GRAU (POBLATS MARÍTIMS), lat=39.426827, lon=-0.311742, aparcamiento existente más cercano=2006m
-- Puesto 4: LA PUNTA (QUATRE CARRERES), lat=39.433079, lon=-0.347491, aparcamiento existente más cercano=1119m
-- Puesto 5: LA PUNTA (QUATRE CARRERES), lat=39.433079, lon=-0.337022, aparcamiento existente más cercano=1034m
-- Puesto 6: LA PUNTA (QUATRE CARRERES), lat=39.438469, lon=-0.354470, aparcamiento existente más cercano=1028m
-- Puesto 7: CAMI DE VERA (BENIMACLET), lat=39.488291, lon=-0.348039, aparcamiento existente más cercano=581m
-- Puesto 8: NATZARET (POBLATS MARÍTIMS), lat=39.438992, lon=-0.334886, aparcamiento existente más cercano=524m
-- Puesto 9: CAMI REAL (JESUS), lat=39.446623, lon=-0.404109, aparcamiento existente más cercano=479m
-- Puesto 10: SANT PAU (CAMPANAR), lat=39.485638, lon=-0.421314, aparcamiento existente más cercano=984m
+## Interpretación y límites
 
-## Interpretación
-
-El score de prioridad debe leerse como una señal de apoyo al análisis, no como una decisión automática. El siguiente paso sería validar las ubicaciones candidatas con información de calle, demanda ciclista, disponibilidad de espacio y restricciones urbanísticas.
+Las áreas de revisión no son propuestas de obra. El modelo usa distancia en línea recta, no rutas reales, demanda, ocupación, capacidad futura, coste, propiedad, red viaria ni restricciones urbanísticas. Moran es un diagnóstico global exploratorio; los cuadrantes locales no son pruebas de significación. Cualquier intervención requeriría validación de calle, participación, datos de demanda y una evaluación técnica municipal.

@@ -2,6 +2,7 @@ import math
 from collections.abc import Iterable
 from functools import cache
 
+import numpy as np
 from pyproj import Transformer
 from shapely.geometry import Point, shape
 from shapely.geometry.base import BaseGeometry
@@ -44,6 +45,48 @@ def nearest_distance_meters(
     if not points:
         raise ValueError("candidate_points must contain at least one point")
     return min(haversine_meters(lat, lon, p_lat, p_lon) for p_lat, p_lon in points)
+
+
+def nearest_distances_meters(
+    latitudes: Iterable[float],
+    longitudes: Iterable[float],
+    candidate_points: Iterable[tuple[float, float]],
+    chunk_size: int = 1_000,
+) -> np.ndarray:
+    """Return nearest great-circle distance for each point using bounded vectorized batches."""
+    latitude_values = np.asarray(list(latitudes), dtype=float)
+    longitude_values = np.asarray(list(longitudes), dtype=float)
+    candidates = np.asarray(list(candidate_points), dtype=float)
+
+    if latitude_values.shape != longitude_values.shape:
+        raise ValueError("latitudes and longitudes must have the same length")
+    if candidates.size == 0:
+        raise ValueError("candidate_points must contain at least one point")
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be positive")
+
+    candidate_latitudes = np.radians(candidates[:, 0])
+    candidate_longitudes = np.radians(candidates[:, 1])
+    result = np.empty(len(latitude_values), dtype=float)
+
+    for start in range(0, len(latitude_values), chunk_size):
+        stop = min(start + chunk_size, len(latitude_values))
+        source_latitudes = np.radians(latitude_values[start:stop])[:, None]
+        source_longitudes = np.radians(longitude_values[start:stop])[:, None]
+        delta_latitudes = candidate_latitudes[None, :] - source_latitudes
+        delta_longitudes = candidate_longitudes[None, :] - source_longitudes
+        haversine_a = (
+            np.sin(delta_latitudes / 2) ** 2
+            + np.cos(source_latitudes)
+            * np.cos(candidate_latitudes[None, :])
+            * np.sin(delta_longitudes / 2) ** 2
+        )
+        distances = 2 * EARTH_RADIUS_METERS * np.arctan2(
+            np.sqrt(haversine_a), np.sqrt(1 - haversine_a)
+        )
+        result[start:stop] = distances.min(axis=1)
+
+    return result
 
 
 def shape_geometry(geometry: dict) -> BaseGeometry:

@@ -9,6 +9,7 @@ from geo_utils import (
     grid_points_in_geometry,
     haversine_meters,
     nearest_distance_meters,
+    nearest_distances_meters,
     point_in_geojson_geometry,
     utm_to_latlon,
 )
@@ -78,3 +79,17 @@ def test_small_polygon_receives_representative_grid_point():
 def test_nearest_distance_requires_candidates():
     with pytest.raises(ValueError, match="at least one"):
         nearest_distance_meters(39.47, -0.37, [])
+
+
+def test_vectorized_nearest_distances_match_scalar_calculation():
+    points = [(39.4700, -0.3700), (39.4750, -0.3650)]
+    candidates = [(39.4700, -0.3700), (39.4800, -0.3600)]
+
+    result = nearest_distances_meters(
+        [point[0] for point in points],
+        [point[1] for point in points],
+        candidates,
+    )
+
+    expected = [nearest_distance_meters(*point, candidates) for point in points]
+    assert result.tolist() == pytest.approx(expected)

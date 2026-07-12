@@ -1,6 +1,8 @@
-matplotlib>=3.7,<4
-numpy>=1.24,<3
-pandas>=2.0,<4
-pyproj>=3.6,<4
-shapely>=2.0,<3
-truststore>=0.10,<1
+matplotlib==3.10.6
+numpy==2.3.3
+pandas==2.3.2
+plotly==6.7.0
+pyproj==3.7.2
+shapely==2.1.2
+streamlit==1.57.0
+truststore==0.10.4

@@ -1,54 +1,82 @@
-# Equidad del aparcamiento de bicicletas en Valencia
+# Valencia Bike Equity
 
 [![CI](https://github.com/0227lia/valencia-bike-equity-analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/0227lia/valencia-bike-equity-analysis/actions/workflows/ci.yml)
 
-Análisis geoespacial reproducible para comparar cobertura, capacidad y vulnerabilidad urbana por barrio, y detectar zonas que merecen una revisión más detallada.
+Sistema reproducible de apoyo exploratorio para revisar la equidad territorial del aparcamiento de bicicletas en Valencia. Integra datos abiertos municipales, análisis geoespacial, robustez multicriterio, diagnóstico espacial y una simulación contrafactual de áreas de revisión.
 
-![Mapa de prioridades](reports/figures/priority_map.png)
+![Panel de decisión](reports/figures/equity_decision_dashboard.png)
 
 ## Problema
 
-Una distribución amplia de aparcamientos no garantiza que todos los barrios tengan una cobertura comparable. El proyecto responde:
+Una red amplia de aparcamientos no implica una cobertura comparable entre barrios. El proyecto responde a cuatro preguntas:
 
-1. ¿Qué barrios combinan mayor vulnerabilidad y menor cobertura?
-2. ¿Hasta qué punto cambia el ranking al modificar las prioridades de política pública?
-3. ¿Qué zonas alejadas de la infraestructura existente podrían revisarse sobre el terreno?
+1. ¿Qué barrios combinan vulnerabilidad, menor capacidad declarada y peor accesibilidad espacial?
+2. ¿Qué posiciones del ranking siguen siendo estables cuando cambian las prioridades de política pública?
+3. ¿Existe agrupación espacial en la señal de prioridad?
+4. ¿Qué zonas merecen revisión de calle bajo una cartera contrafactual con restricciones explícitas?
+
+Las áreas resultantes son **puntos de cribado modelados**, no propuestas de obra ni recomendaciones de inversión.
 
 ## Resultados de la ejecución incluida
 
-- 4.316 puntos de aparcamiento procesados.
-- 70 barrios analizados.
-- 617 puntos interiores usados para estimar accesibilidad.
-- 24 ubicaciones candidatas tras aplicar separación y límite por barrio.
-- `EL GRAU` ocupa la primera posición en el escenario base.
-- El escenario centrado en equidad conserva 8 de los 10 primeros barrios.
-- El escenario centrado en accesibilidad conserva 5 de los 10 primeros barrios.
+Los siguientes resultados se generan desde el snapshot público versionado en el repositorio:
 
-Los candidatos no son propuestas de obra. No se han validado espacio físico, propiedad, red viaria, demanda ni restricciones urbanísticas.
+- 4.316 puntos de aparcamiento y 70 barrios procesados.
+- 617 puntos de malla de diagnóstico a 300 m y 2.395 puntos de simulación a 150 m.
+- `EL GRAU` mantiene el rango 1 en el 100% de los 10.000 escenarios de pesos ejecutados.
+- Nueve barrios presentan una probabilidad de al menos 80% de permanecer en el top 10 bajo esa simulación.
+- Moran global de prioridad: `I = 0.255`; prueba bilateral por 999 permutaciones: `p = 0.001`.
+- La cartera contrafactual de 25 áreas de revisión reduce el déficit de distancia ponderado un 71,0% y lleva 179 puntos de malla por debajo del umbral de 250 m.
 
-![Sensibilidad del ranking](reports/figures/ranking_sensitivity.png)
+Estas cifras no estiman demanda, coste, capacidad futura ni viabilidad física. Consulta el [resumen ejecutivo](reports/executive_summary.md) y la [tarjeta de decisión](docs/DECISION_MODEL.md) antes de interpretar los resultados.
+
+## Enfoque
+
+```text
+Snapshots de datos abiertos
+            |
+Normalización espacial y trazabilidad SHA-256
+            |
+Mallas de accesibilidad (300 m y 150 m)
+            |
+MCDA transparente + escenarios fijos
+            |
+10.000 simulaciones Dirichlet de pesos
+            |
+Moran global + cuadrantes espaciales descriptivos
+            |
+Selección greedy de áreas de revisión y frontera de impacto
+            |
+Tablas, gráficos, resumen y dashboard Streamlit
+```
+
+### Score de prioridad base
+
+Cada componente se normaliza entre 0 y 1. El score base es:
+
+```text
+0,40 vulnerabilidad + 0,30 déficit de plazas + 0,20 déficit de accesibilidad + 0,10 cobertura insuficiente
+```
+
+El [documento metodológico](docs/METHODOLOGY.md) explica la construcción de cada señal, el muestreo de pesos, el test espacial y la simulación contrafactual.
+
+## Dashboard interactivo
+
+El dashboard permite explorar pesos, movimientos en el ranking, la cartera base de zonas de revisión y el patrón espacial:
+
+```bash
+streamlit run app.py
+```
+
+![Intervalos de robustez](reports/figures/robustness_rank_intervals.png)
 
 ## Tecnologías
 
 - Python, pandas y NumPy.
-- `pyproj` para transformar `EPSG:25830` a coordenadas geográficas.
-- Shapely para geometrías y asignación espacial.
-- Matplotlib para mapas y gráficos.
-- `truststore` para descargar datos con TLS verificado.
-- pytest, Ruff y GitHub Actions para validación.
-
-## Flujo del proyecto
-
-```text
-ArcGIS + GeoJSON
-       │
-       ├─> descarga segura + manifiesto SHA-256
-       ├─> transformación de coordenadas y geometrías
-       ├─> asignación de aparcamientos a barrios
-       ├─> malla de accesibilidad y distancias
-       ├─> score base + escenarios de sensibilidad
-       └─> candidatos, tablas, figuras y resumen ejecutivo
-```
+- Shapely y pyproj para geometrías, asignación espacial y transformación `EPSG:25830 -> EPSG:4326`.
+- Matplotlib y Plotly para visualización estática e interactiva.
+- Streamlit para el dashboard local.
+- pytest, Ruff y GitHub Actions para calidad y reconstrucción continua.
 
 ## Instalación
 
@@ -56,29 +84,29 @@ ArcGIS + GeoJSON
 python -m venv .venv
 ```
 
-Windows:
+En Windows:
 
 ```powershell
 .venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 ```
 
-macOS o Linux:
+En macOS o Linux:
 
 ```bash
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 ```
 
-## Ejecución
+## Ejecución reproducible
 
-El snapshot público incluido permite reconstruir todo sin conexión:
+El snapshot incluido permite ejecutar todo sin red:
 
 ```bash
 python src/run_pipeline.py
 ```
 
-Para actualizar primero las fuentes:
+Para actualizar las fuentes públicas antes de reconstruir:
 
 ```bash
 python src/fetch_data.py
@@ -88,31 +116,43 @@ python src/run_pipeline.py
 ## Validación
 
 ```bash
-python -m pip install -r requirements-dev.txt
-ruff check .
-pytest
+python -m ruff check .
+python -m pytest
+python src/run_pipeline.py
 ```
+
+La integración continua ejecuta estos controles y reconstruye el análisis desde los snapshots versionados.
 
 ## Salidas principales
 
-- `data/processed/neighborhood_equity_scores.csv`
-- `data/processed/candidate_locations.csv`
-- `reports/sensitivity_analysis.csv`
-- `reports/executive_summary.md`
-- `reports/figures/priority_map.png`
-- `reports/figures/top_priority_neighborhoods.png`
-- `reports/figures/vulnerability_vs_capacity.png`
-- `reports/figures/ranking_sensitivity.png`
+| Salida | Contenido |
+|---|---|
+| `data/processed/neighborhood_equity_scores.csv` | Señales, score, ranking robusto y cuadrante espacial por barrio. |
+| `data/processed/weight_robustness.csv` | Intervalos de score y rango de 10.000 simulaciones. |
+| `data/processed/planning_grid.csv` | Malla de 150 m usada en la simulación. |
+| `data/processed/candidate_locations.csv` | Áreas de revisión modeladas con ganancias marginales. |
+| `reports/coverage_frontier.csv` | Impacto acumulado por presupuesto de cartera. |
+| `reports/spatial_diagnostics.json` | Moran global y distribución por permutaciones. |
+| `reports/figures/equity_decision_dashboard.png` | Panel estático para revisión rápida. |
 
-El [diccionario de datos](docs/DATA_DICTIONARY.md) describe las columnas y la [metodología](docs/METHODOLOGY.md) documenta supuestos, pesos y limitaciones.
+El [diccionario de datos](docs/DATA_DICTIONARY.md) detalla las columnas y la [tarjeta de decisión](docs/DECISION_MODEL.md) delimita usos y riesgos.
 
-## Fuentes
+## Datos y privacidad
 
-- [Aparcamientos de bicicleta - Datos Abiertos Valencia](https://opendata.vlci.valencia.es/dataset/aparcaments-bicicletes-aparcamientos-bicicletas)
-- [Vulnerabilidad por barrios - Datos Abiertos Valencia](https://opendata.vlci.valencia.es/dataset/vulnerabilidad-por-barrios)
+Los datos proceden de fuentes abiertas del Ayuntamiento de Valencia y no contienen datos personales:
+
+- [Aparcamientos de bicicleta](https://opendata.vlci.valencia.es/dataset/aparcaments-bicicletes-aparcamientos-bicicletas)
+- [Vulnerabilidad por barrios](https://opendata.vlci.valencia.es/dataset/vulnerabilidad-por-barrios)
+
+`data/raw/source_manifest.json` conserva URL, fecha de descarga, número de registros y hash SHA-256 de cada snapshot. Revisa las condiciones de reutilización de las fuentes antes de redistribuir los datos.
+
+## Limitaciones
+
+- Distancias geodésicas en línea recta; no representa rutas ciclistas ni barreras urbanas.
+- Sin demanda ciclista, ocupación, población, coste, disponibilidad de espacio o restricciones de calle.
+- Los pesos expresan una política analítica; la robustez mide sensibilidad a esos pesos, no causalidad.
+- Moran es una señal global exploratoria; los cuadrantes locales no son tests de significación individual.
 
 ## Autor
 
-Desarrollado por [0227lia](https://github.com/0227lia) como proyecto de portfolio de Ciencia de Datos.
-
-El código se publica con licencia MIT. Los datasets mantienen las condiciones indicadas por sus fuentes originales.
+Proyecto de portfolio de Ciencia de Datos desarrollado por [0227lia](https://github.com/0227lia). Código bajo licencia MIT; los datasets conservan los términos de sus fuentes.
