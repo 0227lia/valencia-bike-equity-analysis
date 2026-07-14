@@ -7,6 +7,7 @@ import json
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.patches import Rectangle
 
 from config import (
     CANDIDATE_LOCATIONS_PATH,
@@ -19,15 +20,16 @@ from config import (
     SPATIAL_DIAGNOSTICS_PATH,
 )
 
-INK = "#172033"
-MUTED = "#64748B"
-GRID = "#DCE3EA"
+INK = "#0B2130"
+MUTED = "#597181"
+GRID = "#D6E0E5"
 TEAL = "#0F766E"
 TEAL_LIGHT = "#99F6E4"
-CORAL = "#E85D4A"
-GOLD = "#D97706"
-BLUE = "#2563EB"
+CORAL = "#E85D45"
+GOLD = "#D28A1E"
+BLUE = "#2F6BFF"
 VIOLET = "#7C3AED"
+PAPER = "#F4F7F6"
 
 
 def _apply_style() -> None:
@@ -43,14 +45,14 @@ def _apply_style() -> None:
             "axes.edgecolor": GRID,
             "axes.spines.top": False,
             "axes.spines.right": False,
-            "figure.facecolor": "white",
+            "figure.facecolor": PAPER,
             "axes.facecolor": "white",
         }
     )
 
 
 def _save(fig: plt.Figure, filename: str) -> None:
-    fig.savefig(FIGURE_DIR / filename, dpi=190, bbox_inches="tight", facecolor="white")
+    fig.savefig(FIGURE_DIR / filename, dpi=190, bbox_inches="tight", facecolor=fig.get_facecolor())
     plt.close(fig)
 
 
@@ -448,33 +450,86 @@ def plot_decision_dashboard(
     frontier: pd.DataFrame,
     diagnostics: dict[str, object],
 ) -> None:
-    fig, axes = plt.subplots(2, 2, figsize=(15, 11))
-    draw_priority_map(axes[0, 0], scores, candidates, include_legend=False)
-    axes[0, 0].set_title("Prioridad territorial y revisión", loc="left")
-    draw_rank_intervals(axes[0, 1], scores, limit=10)
-    axes[0, 1].set_title("Robustez del top 10", loc="left")
-    draw_coverage_frontier(axes[1, 0], frontier)
-    axes[1, 0].set_title("Frontera contrafactual", loc="left")
-    draw_spatial_quadrants(axes[1, 1], scores, diagnostics)
-    axes[1, 1].set_title("Diagnóstico espacial", loc="left")
-    fig.suptitle(
-        "Valencia Bike Equity | panel de decisión exploratorio",
-        x=0.075,
-        ha="left",
-        fontsize=17,
+    fig = plt.figure(figsize=(16, 9), dpi=170, facecolor=PAPER)
+    grid = fig.add_gridspec(
+        2,
+        2,
+        left=0.065,
+        right=0.97,
+        top=0.61,
+        bottom=0.105,
+        hspace=0.48,
+        wspace=0.34,
+    )
+    axes = [
+        [fig.add_subplot(grid[0, 0]), fig.add_subplot(grid[0, 1])],
+        [fig.add_subplot(grid[1, 0]), fig.add_subplot(grid[1, 1])],
+    ]
+    draw_priority_map(axes[0][0], scores, candidates, include_legend=False)
+    axes[0][0].set_title("Prioridad territorial y revisión", loc="left", pad=10)
+    draw_rank_intervals(axes[0][1], scores, limit=10)
+    axes[0][1].set_title("Robustez del top 10", loc="left", pad=10)
+    draw_coverage_frontier(axes[1][0], frontier)
+    axes[1][0].set_title("Frontera contrafactual", loc="left", pad=10)
+    draw_spatial_quadrants(axes[1][1], scores, diagnostics)
+    axes[1][1].set_title("Diagnóstico espacial", loc="left", pad=10)
+
+    max_frontier = frontier.loc[frontier["budget"].idxmax()]
+    robust_top = int(scores["top_10_probability"].ge(0.8).sum())
+    kpis = [
+        ("BARRIOS ANALIZADOS", f"{len(scores)}", "cobertura municipal"),
+        ("REVISIÓN MODELADA", f"{min(15, len(candidates))}", "áreas candidatas"),
+        ("TOP 10 ROBUSTO", f"{robust_top}", "P(top 10) ≥ 80%"),
+        (
+            "REDUCCIÓN PONDERADA",
+            f"{max_frontier['weighted_gap_reduction_share']:.0%}",
+            f"presupuesto = {int(max_frontier['budget'])}",
+        ),
+    ]
+    card_width = 0.205
+    for index, (label, value, note) in enumerate(kpis):
+        left = 0.065 + index * 0.225
+        fig.patches.append(
+            Rectangle(
+                (left, 0.665),
+                card_width,
+                0.115,
+                transform=fig.transFigure,
+                facecolor="white",
+                edgecolor=GRID,
+                linewidth=0.8,
+            )
+        )
+        fig.text(left + 0.012, 0.748, label, color=TEAL, fontsize=8, weight="bold")
+        fig.text(left + 0.012, 0.704, value, color=INK, fontsize=18, weight="bold")
+        fig.text(left + 0.012, 0.68, note, color=MUTED, fontsize=7.5)
+
+    fig.text(0.065, 0.945, "VALENCIA BIKE EQUITY", color=TEAL, fontsize=10, weight="bold")
+    fig.text(
+        0.065,
+        0.885,
+        "Prioridad territorial con incertidumbre visible",
+        color=INK,
+        fontsize=24,
         weight="bold",
     )
     fig.text(
-        0.075,
-        0.015,
+        0.065,
+        0.842,
+        "Índice compuesto, simulación contrafactual y diagnóstico espacial sobre datos abiertos municipales.",
+        color=MUTED,
+        fontsize=11,
+    )
+    fig.text(
+        0.065,
+        0.04,
         (
-            "Resultados reproducibles con datos abiertos municipales. El análisis orienta revisión; "
-            "no determina inversión ni viabilidad física."
+            "El análisis orienta revisión; no determina inversión, demanda ni viabilidad física. "
+            f"Moran global I={diagnostics['morans_i']:.3f}; los cuadrantes locales son descriptivos."
         ),
         color=MUTED,
-        fontsize=9,
+        fontsize=8.5,
     )
-    fig.tight_layout(rect=(0, 0.03, 1, 0.96))
     _save(fig, "equity_decision_dashboard.png")
 
 
